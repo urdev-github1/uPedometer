@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/location_tracker_controller.dart';
+import 'package:upedometer/widgets/generic_dialog.dart';
 
 class LocationTrackerScreen extends StatefulWidget {
   const LocationTrackerScreen({super.key});
@@ -18,30 +19,15 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
 
   Future<void> _showResetConfirmationDialog(BuildContext context) async {
     final controller = Provider.of<LocationTrackerController>(context, listen: false);
-    final bool? confirmReset = await showDialog<bool>(
+
+    // OPTIMIERT: Ersetzen Sie den langen Dialog-Code durch den sauberen Funktionsaufruf.
+    final bool? confirmReset = await showConfirmationDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: Theme.of(dialogContext).dialogTheme.backgroundColor,
-          title: Text('Tracking zurücksetzen?', style: Theme.of(dialogContext).textTheme.titleLarge),
-          content: Text(
-            'Möchtest du die aufgezeichnete Distanz, Zeit und Adresse wirklich löschen?',
-            style: Theme.of(dialogContext).textTheme.bodyMedium,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Abbrechen', style: TextStyle(color: Theme.of(dialogContext).textTheme.bodyMedium?.color)),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(backgroundColor: Colors.redAccent.withAlpha(204)),
-              child: const Text('Zurücksetzen', style: TextStyle(color: Colors.white)),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-            ),
-          ],
-        );
-      },
+      title: 'Tracking zurücksetzen?',
+      content: 'Möchtest du die aufgezeichnete Distanz, Zeit und Adresse wirklich löschen?',
+      confirmText: 'Zurücksetzen',
     );
+
     if (confirmReset == true) {
       controller.resetTracking();
     }
