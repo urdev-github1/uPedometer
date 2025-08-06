@@ -151,7 +151,7 @@ class LocationTrackerController with ChangeNotifier {
       final locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 0,
-        intervalDuration: const Duration(seconds: 3),
+        intervalDuration: const Duration(seconds: 12),
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: "Tracking aktiv",
           notificationText: "Ihre Route wird aufgezeichnet.",
