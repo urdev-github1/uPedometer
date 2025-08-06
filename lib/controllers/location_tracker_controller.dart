@@ -1,6 +1,7 @@
 // lib/controllers/location_tracker_controller.dart
 
 import 'dart:async';
+import 'dart:convert'; // HINZUGEFÜGT: Für die JSON-Konvertierung
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,6 +15,7 @@ const String kIsTrackingKey = 'is_tracking_active';
 const String kStartTimeKey = 'start_time';
 const String kStopTimeKey = 'stop_time';
 const String kAddressKey = 'address';
+const String kRoutePointsKey = 'route_points'; // HINZUGEFÜGT: Für die Routenpunkte
 
 /// Verwaltet die Logik für das GPS-Tracking und speichert den Zustand persistent.
 class LocationTrackerController with ChangeNotifier {
@@ -77,6 +79,15 @@ class LocationTrackerController with ChangeNotifier {
 
     _address = prefs.getString(kAddressKey);
 
+    // --- ROUTENPUNKTE LADEN ---
+    final String? savedRoute = prefs.getString(kRoutePointsKey);
+    if (savedRoute != null) {
+      final List<dynamic> decodedList = json.decode(savedRoute);
+      _routePoints.clear();
+      _routePoints.addAll(decodedList.map<LatLng>((item) => LatLng(item['lat'], item['lng'])));
+    }
+    // --- ENDE ---
+
     if (_isTracking) {
       _statusMessage = 'Tracking wird fortgesetzt...';
     } else if (_totalDistance > 0) {
@@ -108,6 +119,17 @@ class LocationTrackerController with ChangeNotifier {
     } else {
       await prefs.remove(kAddressKey);
     }
+
+    // --- ROUTENPUNKTE SPEICHERN ---
+    if (_routePoints.isNotEmpty) {
+      final List<Map<String, double>> routePointsAsMap = _routePoints
+          .map((point) => {'lat': point.latitude, 'lng': point.longitude})
+          .toList();
+      await prefs.setString(kRoutePointsKey, json.encode(routePointsAsMap));
+    } else {
+      await prefs.remove(kRoutePointsKey);
+    }
+    // --- ENDE ---
   }
 
   /// Startet den Tracking-Vorgang.
@@ -119,7 +141,7 @@ class LocationTrackerController with ChangeNotifier {
       if (!_isTracking) {
         _startTime = DateTime.now();
         _stopTime = null;
-        _routePoints.clear();
+        _routePoints.clear(); // Nur beim expliziten Start die Route zurücksetzen
       }
 
       _isTracking = true;
@@ -150,7 +172,7 @@ class LocationTrackerController with ChangeNotifier {
           }
           _lastPosition = position;
           _routePoints.add(LatLng(position.latitude, position.longitude));
-          _saveState();
+          _saveState(); // Zustand speichern inkl. der neuen Route
           notifyListeners();
         },
         onError: (error) {
@@ -162,9 +184,9 @@ class LocationTrackerController with ChangeNotifier {
       await _saveState();
       notifyListeners();
     } else {
-      _isTracking = false; // Zustand explizit aktualisieren
+      _isTracking = false;
       _statusMessage = 'Standortberechtigung verweigert.';
-      await _saveState(); // Zustand speichern, um Konsistenz zu gewährleisten
+      await _saveState();
       notifyListeners();
     }
   }
@@ -221,6 +243,7 @@ class LocationTrackerController with ChangeNotifier {
   /// Setzt alle Tracking-Daten zurück.
   void resetTracking() {
     if (_isTracking) {
+      // Stoppt das Tracking, wenn es aktiv ist, aber löscht die Daten noch nicht
       stopTracking();
     }
 
@@ -228,10 +251,10 @@ class LocationTrackerController with ChangeNotifier {
     _startTime = null;
     _stopTime = null;
     _address = null;
-    _routePoints.clear();
+    _routePoints.clear(); // Leert die Routenpunkte im Arbeitsspeicher
     _statusMessage = 'Drücke Start, um das Tracking zu beginnen.';
 
-    _saveState();
+    _saveState(); // Speichert den leeren Zustand (inkl. leerer Route)
     notifyListeners();
   }
 
