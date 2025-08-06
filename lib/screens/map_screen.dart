@@ -81,8 +81,6 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
           ),
         ],
       ),
-      // HINWEIS: Der Body wird jetzt basierend auf dem Internetstatus und dem Tracking-Status aufgebaut.
-      // Die Logik ist viel klarer strukturiert.
       body: _buildBody(),
     );
   }
@@ -99,23 +97,60 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         final bool hasRouteData = controller.route.isNotEmpty || controller.currentPosition != null;
 
         if (!hasRouteData) {
-          // Zeigt einen Hilfetext, wenn weder eine Route noch eine Position vorhanden ist.
           return _HelpText(
             message: controller.isTracking ? 'GPS-Signal wird gesucht...' : null,
           );
         }
 
-        // Wenn Daten vorhanden sind, zeige die Karte.
-        return _MapView(
-          mapController: _mapController,
-          route: controller.route,
-          currentPosition: controller.currentPosition,
-          isMapReady: _isMapReady,
-          onMapReady: () {
-            if (mounted) setState(() => _isMapReady = true);
-          },
-          isTracking: isTrackingActive,
+        // --- TEMPORÄR ZUM TESTEN ---
+        // Wir wrappen die Karte in einen Stack, um den Slider darüber zu legen.
+        return Stack(
+          children: [
+            _MapView(
+              mapController: _mapController,
+              route: controller.route,
+              currentPosition: controller.currentPosition,
+              isMapReady: _isMapReady,
+              onMapReady: () {
+                if (mounted) setState(() => _isMapReady = true);
+              },
+              isTracking: isTrackingActive,
+            ),
+            // Slider als Overlay am unteren Bildschirmrand
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Test: Tracking-Intervall (${controller.trackingInterval} s)',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      Slider(
+                        value: controller.trackingInterval.toDouble(),
+                        min: 0,
+                        max: 20,
+                        divisions: 20, // Erlaubt nur ganze Zahlen (0, 1, 2, ...)
+                        label: '${controller.trackingInterval.round()} s',
+                        onChanged: (value) {
+                          // Hier wird die neue Methode im Controller aufgerufen
+                          controller.updateTrackingInterval(value.round());
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
+        // --- ENDE TEMPORÄR ---
       },
     );
   }
@@ -144,7 +179,6 @@ class _MapView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Zentriert die Karte automatisch, wenn das Tracking aktiv ist.
     if (isTracking && isMapReady && currentPosition != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         mapController.move(
@@ -154,7 +188,6 @@ class _MapView extends StatelessWidget {
       });
     }
 
-    // Bestimmt den initialen Mittelpunkt der Karte.
     LatLng initialCenter;
     if (currentPosition != null) {
       initialCenter = LatLng(currentPosition.latitude, currentPosition.longitude);
@@ -166,7 +199,7 @@ class _MapView extends StatelessWidget {
       mapController: mapController,
       options: MapOptions(
         initialCenter: initialCenter,
-        initialZoom: 17.0, // Der Zoom-Level wurde hier belassen
+        initialZoom: 17.0,
         onMapReady: onMapReady,
       ),
       children: [

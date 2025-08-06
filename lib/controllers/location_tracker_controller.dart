@@ -25,6 +25,11 @@ class LocationTrackerController with ChangeNotifier {
   StreamSubscription<Position>? _positionStreamSubscription;
   Position? _lastPosition;
 
+  // --- TEMPORÄR ZUM TESTEN ---
+  int _trackingInterval = 3; // Standardwert, z.B. 3 Sekunden
+  int get trackingInterval => _trackingInterval;
+  // --- ENDE TEMPORÄR ---
+
   final List<LatLng> _routePoints = [];
 
   String? _address;
@@ -132,6 +137,22 @@ class LocationTrackerController with ChangeNotifier {
     // --- ENDE ---
   }
 
+  // --- TEMPORÄR ZUM TESTEN ---
+  /// Aktualisiert das Tracking-Intervall und startet das Tracking neu, wenn es aktiv ist.
+  void updateTrackingInterval(int newInterval) {
+    if (_trackingInterval == newInterval) return;
+
+    _trackingInterval = newInterval;
+    notifyListeners(); // UI sofort aktualisieren (Slider-Anzeige)
+
+    // Wenn das Tracking bereits läuft, stoppen und mit dem neuen Intervall neu starten.
+    if (_isTracking) {
+      stopTracking();
+      startTracking();
+    }
+  }
+  // --- ENDE TEMPORÄR ---
+
   /// Startet den Tracking-Vorgang.
   Future<void> startTracking() async {
     final permissionStatus = await Permission.location.request();
@@ -151,7 +172,8 @@ class LocationTrackerController with ChangeNotifier {
       final locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 0,
-        intervalDuration: const Duration(seconds: 12),
+        // ÄNDERUNG: Verwende die neue Variable statt des festen Werts
+        intervalDuration: Duration(seconds: _trackingInterval), 
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: "Tracking aktiv",
           notificationText: "Ihre Route wird aufgezeichnet.",
