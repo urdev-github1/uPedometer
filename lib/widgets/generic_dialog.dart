@@ -1,3 +1,5 @@
+// lib/widgets/generic_dialog.dart
+
 import 'package:flutter/material.dart';
 
 /// Zeigt einen allgemeinen, wiederverwendbaren Bestätigungsdialog an.

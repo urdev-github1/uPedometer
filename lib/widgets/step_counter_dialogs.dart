@@ -1,3 +1,5 @@
+// lib/widgets/step_counter_dialogs.dart
+
 import 'package:flutter/material.dart';
 import 'package:upedometer/controllers/step_counter_controller.dart';
 // NEU: Importieren Sie Ihren generischen Dialog.
