@@ -226,16 +226,35 @@ class LocationTrackerController with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Formatiert ein Placemark-Objekt in einen lesbaren String.
+  // =============================================================== //
+  // --- ANPASSUNG START: Zweizeilige Adressformatierung ---         //
+  // =============================================================== //
+  /// Formatiert ein Placemark-Objekt in einen zweizeiligen, lesbaren String.
   String _formatPlacemark(Placemark placemark) {
+    // Straße und Hausnummer extrahieren
     String street = placemark.street ?? '';
-    String locality = placemark.locality ?? '';
-    String postalCode = placemark.postalCode ?? '';
+    
+    // Postleitzahl und Ort zu einer Zeile zusammenfügen.
+    // .trim() entfernt führende/nachgestellte Leerzeichen, falls einer der Werte fehlt.
+    String cityLine = '${placemark.postalCode ?? ''} ${placemark.locality ?? ''}'.trim();
+
+    // Wenn die Straße leer ist, nur die Stadt-Zeile zurückgeben.
     if (street.isEmpty) {
-        return '$postalCode $locality';
+      return cityLine;
     }
-    return '$street, $postalCode $locality';
+    
+    // Wenn die Stadt-Zeile leer ist, nur die Straße zurückgeben.
+    if (cityLine.isEmpty) {
+      return street;
+    }
+
+    // Beide Teile mit einem Zeilenumbruch (\n) kombinieren.
+    return '$street\n$cityLine';
   }
+  // =============================================================== //
+  // --- ANPASSUNG ENDE ---                                          //
+  // =============================================================== //
+
 
   /// Ruft die aktuelle Position ab und ermittelt die zugehörige Adresse.
   Future<void> fetchAddress() async {

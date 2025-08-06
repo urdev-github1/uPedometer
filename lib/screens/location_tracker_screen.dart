@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/location_tracker_controller.dart';
-import 'package:upedometer/widgets/generic_dialog.dart';
 
 class LocationTrackerScreen extends StatefulWidget {
   const LocationTrackerScreen({super.key});
@@ -19,15 +18,30 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
 
   Future<void> _showResetConfirmationDialog(BuildContext context) async {
     final controller = Provider.of<LocationTrackerController>(context, listen: false);
-
-    // OPTIMIERT: Ersetzen Sie den langen Dialog-Code durch den sauberen Funktionsaufruf.
-    final bool? confirmReset = await showConfirmationDialog(
+    final bool? confirmReset = await showDialog<bool>(
       context: context,
-      title: 'Tracking zurücksetzen?',
-      content: 'Möchtest du die aufgezeichnete Distanz, Zeit und Adresse wirklich löschen?',
-      confirmText: 'Zurücksetzen',
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: Theme.of(dialogContext).dialogTheme.backgroundColor,
+          title: Text('Tracking zurücksetzen?', style: Theme.of(dialogContext).textTheme.titleLarge),
+          content: Text(
+            'Möchtest du die aufgezeichnete Distanz, Zeit und Adresse wirklich löschen?',
+            style: Theme.of(dialogContext).textTheme.bodyMedium,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Abbrechen', style: TextStyle(color: Theme.of(dialogContext).textTheme.bodyMedium?.color)),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(backgroundColor: Colors.redAccent.withAlpha(204)),
+              child: const Text('Zurücksetzen', style: TextStyle(color: Colors.white)),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+            ),
+          ],
+        );
+      },
     );
-
     if (confirmReset == true) {
       controller.resetTracking();
     }
@@ -51,12 +65,11 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
           }
 
           final roundedDistance = controller.totalDistanceInKm.toStringAsFixed(2);
+          final textTheme = Theme.of(context).textTheme;
 
-          // GEÄNDERT: Haupt-Layout ist jetzt eine Column, um den Screen aufzuteilen.
           return Column(
             children: <Widget>[
               // --- FESTER OBERER TEIL ---
-              // Dieser Teil hat eine feste Größe und wird nicht verschoben.
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
                 child: Column(
@@ -64,9 +77,9 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                   children: [
                     Text(
                       roundedDistance,
-                      style: TextStyle(fontSize: 72, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+                      style: TextStyle(fontSize: 72, fontWeight: FontWeight.bold, color: textTheme.bodyLarge?.color),
                     ),
-                    Text('Kilometer', style: TextStyle(fontSize: 24, color: Theme.of(context).textTheme.bodyMedium?.color)),
+                    Text('Kilometer', style: TextStyle(fontSize: 24, color: textTheme.bodyMedium?.color)),
                     const SizedBox(height: 30),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -98,18 +111,53 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                   ],
                 ),
               ),
-
-              // --- FLEXIBLER UNTERER TEIL ---
-              // Dieser Teil füllt den restlichen verfügbaren Platz.
+              
+              // =============================================================== //
+              // --- ANPASSUNG START: Padding für Adressblock geändert ---       //
+              // =============================================================== //
               Expanded(
                 child: Align(
-                  alignment: Alignment.topCenter, // Richtet die Adresse oben in diesem Bereich aus.
+                  alignment: Alignment.topCenter,
+                  // Das Padding wurde von 'symmetric' zu 'fromLTRB' geändert,
+                  // um den linken Abstand zu vergrößern (hier auf 44).
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-                    child: _buildAddressDisplay(context, controller),
+                    padding: const EdgeInsets.fromLTRB(44.0, 20.0, 20.0, 20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Aktuelle Position:',
+                          style: textTheme.bodyMedium?.copyWith(fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          constraints: const BoxConstraints(minHeight: 48), // Höhe für zwei Textzeilen
+                          alignment: Alignment.centerLeft,
+                          child: Builder(
+                            builder: (context) {
+                              if (controller.isFetchingAddress) {
+                                return const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2.0)
+                                );
+                              }
+                              return Text(
+                                controller.address ?? '', // Zeigt einen leeren String, wenn keine Adresse da ist.
+                                style: textTheme.bodyLarge?.copyWith(fontSize: 17),
+                                softWrap: true,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
+              // =============================================================== //
+              // --- ANPASSUNG ENDE ---                                          //
+              // =============================================================== //
             ],
           );
         },
@@ -142,53 +190,6 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
     );
   }
 
-  Widget _buildAddressDisplay(BuildContext context, LocationTrackerController controller) {
-    if (controller.isFetchingAddress) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    
-    if (controller.address != null) {
-      return _buildAddressRow(
-        context: context,
-        icon: Icons.location_on,
-        label: 'Aktuelle Position:',
-        address: controller.address!,
-      );
-    }
-    
-    return const SizedBox.shrink(); // Leeres Widget, wenn keine Adresse da ist.
-  }
-
-  Widget _buildAddressRow({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required String address,
-  }) {
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: textTheme.bodyMedium?.color?.withAlpha(200), size: 24),
-        const SizedBox(width: 15),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: textTheme.bodyMedium?.copyWith(fontSize: 16)),
-              const SizedBox(height: 4),
-              Text(
-                address,
-                style: textTheme.bodyLarge?.copyWith(fontSize: 17),
-                softWrap: true,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildTimeInfoCard({
     required BuildContext context,
     required String label,
@@ -197,6 +198,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
   }) {
     final textTheme = Theme.of(context).textTheme;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: textTheme.bodyMedium?.copyWith(fontSize: 14)),
         const SizedBox(height: 4),
