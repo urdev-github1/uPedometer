@@ -25,14 +25,8 @@ class LocationTrackerController with ChangeNotifier {
   StreamSubscription<Position>? _positionStreamSubscription;
   Position? _lastPosition;
 
-  // --- TEMPORÄR ZUM TESTEN ---
-  int _trackingInterval = 7; // Standardwert (7 Sek.)
-  // Der Inhalt von _trackingInterval wird dem aufrufenden Programm übergeben.
-  int get trackingInterval => _trackingInterval;
-  // int get trackingInterval {
-  //    return _trackingInterval;
-  // }
-  // --- ENDE TEMPORÄR ---
+  // Das Tracking-Intervall wird standardmäßig auf 7 Sekunden gesetzt.
+  int _trackingInterval = 7;
 
   final List<LatLng> _routePoints = [];
 
@@ -47,6 +41,8 @@ class LocationTrackerController with ChangeNotifier {
   String get statusMessage => _statusMessage;
   String? get address => _address;
   bool get isFetchingAddress => _isFetchingAddress;
+  // Getter, damit die UI den aktuellen Intervall-Status abfragen kann.
+  int get trackingInterval => _trackingInterval;
 
   DateTime? _startTime;
   DateTime? _stopTime;
@@ -141,22 +137,20 @@ class LocationTrackerController with ChangeNotifier {
     // --- ENDE ---
   }
 
-  // --- TEMPORÄR ZUM TESTEN ---
-  /// Aktualisiert das Tracking-Intervall und startet das Tracking neu, wenn es aktiv ist.
-  // Wird vom Slider in der UI aufgerufen.
-  void updateTrackingInterval(int newInterval) {
-    if (_trackingInterval == newInterval) return;
+  // --- NEUE FUNKTION ---
+  /// Schaltet das Tracking-Intervall zwischen dem Standardwert (7s) und Echtzeit (0s) um.
+  /// Wenn das Tracking aktiv ist, wird es neu gestartet, um die Änderung zu übernehmen.
+  void toggleTrackingInterval() {
+    _trackingInterval = _trackingInterval == 7 ? 0 : 7;
+    notifyListeners(); // UI über die Änderung informieren (z.B. für den Schalter-Status)
 
-    _trackingInterval = newInterval;
-    notifyListeners(); // UI sofort aktualisieren (Slider-Anzeige)
-
-    // Wenn das Tracking bereits läuft, stoppen und mit dem neuen Intervall neu starten.
+    // Wenn das Tracking läuft, wird es gestoppt und mit dem neuen Intervall neu gestartet.
     if (_isTracking) {
       stopTracking();
       startTracking();
     }
   }
-  // --- ENDE TEMPORÄR ---
+  // --- ENDE ---
 
   /// Startet den Tracking-Vorgang.
   Future<void> startTracking() async {
@@ -177,8 +171,8 @@ class LocationTrackerController with ChangeNotifier {
       final locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 0,
-        // ÄNDERUNG: Verwende die neue Variable statt des festen Werts
-        intervalDuration: Duration(seconds: _trackingInterval), 
+        // ANPASSUNG: Die Intervall-Dauer wird durch die _trackingInterval-Variable gesteuert.
+        intervalDuration: Duration(seconds: _trackingInterval),
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: "Tracking aktiv",
           notificationText: "Ihre Route wird aufgezeichnet.",
@@ -238,7 +232,7 @@ class LocationTrackerController with ChangeNotifier {
   String _formatPlacemark(Placemark placemark) {
     // Straße und Hausnummer extrahieren
     String street = placemark.street ?? '';
-    
+
     // Postleitzahl und Ort zu einer Zeile zusammenfügen.
     // .trim() entfernt führende/nachgestellte Leerzeichen, falls einer der Werte fehlt.
     String cityLine = '${placemark.postalCode ?? ''} ${placemark.locality ?? ''}'.trim();
@@ -247,7 +241,7 @@ class LocationTrackerController with ChangeNotifier {
     if (street.isEmpty) {
       return cityLine;
     }
-    
+
     // Wenn die Stadt-Zeile leer ist, nur die Straße zurückgeben.
     if (cityLine.isEmpty) {
       return street;

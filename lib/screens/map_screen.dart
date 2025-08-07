@@ -101,10 +101,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
             message: controller.isTracking ? 'GPS-Signal wird gesucht...' : null,
           );
         }
-
-        // --- TEMPORÄR ZUM TESTEN ---
-        // Stack: Dieses Widget ermöglicht es, mehrere Widgets übereinander zu legen.
-        // Wir wrappen die Karte in einen Stack, um den Slider darüber zu legen.
+        
         return Stack(
           children: [
             _MapView(
@@ -117,41 +114,44 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               },
               isTracking: isTrackingActive,
             ),
-            // Slider als Overlay am unteren Bildschirmrand
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Test: Tracking-Intervall (${controller.trackingInterval} s)',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Slider(
-                        value: controller.trackingInterval.toDouble(),
-                        min: 0,
-                        max: 20,
-                        divisions: 20, // Erlaubt nur ganze Zahlen (0, 1, 2, ...)
-                        label: '${controller.trackingInterval.round()} s',
-                        onChanged: (value) {
-                          // Hier wird die neue Methode im Controller aufgerufen
-                          controller.updateTrackingInterval(value.round());
-                        },
-                      ),
-                    ],
+            
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20.0), 
+                child: Card(
+                  // --- ANPASSUNG START: Neue Hintergrundfarbe ---
+                  color: const Color.fromRGBO(59, 166, 170, 1).withAlpha(175), 
+                  //color: const Color.fromARGB(64, 58, 61, 59).withAlpha(175), 
+                  // --- ANPASSUNG ENDE ---
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 8.0, top: 4.0, bottom: 4.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          controller.trackingInterval == 0
+                              ? 'Erfassung in Echtzeit'
+                              : 'Erfassung alle 7 Sek.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(width: 8), 
+                        Switch(
+                          value: controller.trackingInterval == 0,
+                          onChanged: (bool value) {
+                            controller.toggleTrackingInterval();
+                          },
+                          activeColor: Theme.of(context).hintColor,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ],
         );
-        // --- ENDE TEMPORÄR ---
       },
     );
   }
@@ -159,7 +159,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
 
 
 // =======================================================================
-// NEU: Dediziertes Widget für die Kartenansicht
+// Dediziertes Widget für die Kartenansicht
 // =======================================================================
 class _MapView extends StatelessWidget {
   final MapController mapController;
@@ -232,7 +232,7 @@ class _MapView extends StatelessWidget {
 
 
 // =======================================================================
-// NEU: Kleinere, private Helper-Widgets
+// Kleinere, private Helper-Widgets
 // =======================================================================
 
 /// Zeigt den Marker für die aktuelle Position an.
