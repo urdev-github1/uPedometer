@@ -103,6 +103,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
         }
 
         // --- TEMPORÄR ZUM TESTEN ---
+        // Stack: Dieses Widget ermöglicht es, mehrere Widgets übereinander zu legen.
         // Wir wrappen die Karte in einen Stack, um den Slider darüber zu legen.
         return Stack(
           children: [

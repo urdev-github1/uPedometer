@@ -27,7 +27,11 @@ class LocationTrackerController with ChangeNotifier {
 
   // --- TEMPORÄR ZUM TESTEN ---
   int _trackingInterval = 7; // Standardwert (7 Sek.)
+  // Der Inhalt von _trackingInterval wird dem aufrufenden Programm übergeben.
   int get trackingInterval => _trackingInterval;
+  // int get trackingInterval {
+  //    return _trackingInterval;
+  // }
   // --- ENDE TEMPORÄR ---
 
   final List<LatLng> _routePoints = [];
@@ -139,6 +143,7 @@ class LocationTrackerController with ChangeNotifier {
 
   // --- TEMPORÄR ZUM TESTEN ---
   /// Aktualisiert das Tracking-Intervall und startet das Tracking neu, wenn es aktiv ist.
+  // Wird vom Slider in der UI aufgerufen.
   void updateTrackingInterval(int newInterval) {
     if (_trackingInterval == newInterval) return;
 
