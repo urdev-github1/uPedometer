@@ -26,7 +26,7 @@ class LocationTrackerController with ChangeNotifier {
   Position? _lastPosition;
 
   // --- TEMPORÄR ZUM TESTEN ---
-  int _trackingInterval = 3; // Standardwert, z.B. 3 Sekunden
+  int _trackingInterval = 7; // Standardwert (7 Sek.)
   int get trackingInterval => _trackingInterval;
   // --- ENDE TEMPORÄR ---
 
