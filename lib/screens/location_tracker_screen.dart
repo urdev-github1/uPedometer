@@ -1,5 +1,3 @@
-// lib/screens/location_tracker_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/location_tracker_controller.dart';
@@ -112,52 +110,84 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                 ),
               ),
               
-              // =============================================================== //
-              // --- ANPASSUNG START: Padding für Adressblock geändert ---       //
-              // =============================================================== //
+              // --- CONTAINER FÜR DEN ADRESSBLOCK ---
               Expanded(
                 child: Align(
                   alignment: Alignment.topCenter,
-                  // Das Padding wurde von 'symmetric' zu 'fromLTRB' geändert,
-                  // um den linken Abstand zu vergrößern (hier auf 44).
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(44.0, 20.0, 20.0, 20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Aktuelle Position:',
-                          style: textTheme.bodyMedium?.copyWith(fontSize: 16),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          constraints: const BoxConstraints(minHeight: 48), // Höhe für zwei Textzeilen
-                          alignment: Alignment.centerLeft,
-                          child: Builder(
-                            builder: (context) {
-                              if (controller.isFetchingAddress) {
-                                return const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.0)
-                                );
-                              }
-                              return Text(
-                                controller.address ?? '', // Zeigt einen leeren String, wenn keine Adresse da ist.
-                                style: textTheme.bodyLarge?.copyWith(fontSize: 17),
-                                softWrap: true,
-                              );
-                            },
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white38, width: 1.0),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Aktuelle Position:',
+                            style: textTheme.bodyMedium?.copyWith(fontSize: 16),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Container(
+                            constraints: const BoxConstraints(minHeight: 48),
+                            alignment: Alignment.center, // Wichtig für die Zentrierung der neuen Row
+                            child: Builder(
+                              builder: (context) {
+                                if (controller.isFetchingAddress) {
+                                  return const SizedBox(
+                                    height: 20, width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2.0)
+                                  );
+                                }
+                                
+                                // =============================================================== //
+                                // --- ANPASSUNG START: Emoji durch Icon-Widget ersetzt ---        //
+                                // =============================================================== //
+                                if (controller.address != null) {
+                                  // Wenn eine Adresse vorhanden ist, zeige sie an.
+                                  return Text(
+                                    controller.address!,
+                                    style: textTheme.bodyLarge?.copyWith(fontSize: 17),
+                                    textAlign: TextAlign.start,
+                                    softWrap: true,
+                                  );
+                                } else {
+                                  // Wenn keine Adresse vorhanden ist, zeige die Anweisung mit Icon.
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Tippe ',
+                                        style: textTheme.bodyLarge?.copyWith(fontSize: 17),
+                                      ),
+                                      Icon(
+                                        Icons.pin_drop_outlined, // Das Icon aus dem Button
+                                        color: textTheme.bodyLarge?.color,
+                                        size: 20.0,
+                                      ),
+                                      Text(
+                                        ' um die Adresse zu laden.',
+                                        style: textTheme.bodyLarge?.copyWith(fontSize: 17),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                // =============================================================== //
+                                // --- ANPASSUNG ENDE ---                                          //
+                                // =============================================================== //
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              // =============================================================== //
-              // --- ANPASSUNG ENDE ---                                          //
-              // =============================================================== //
             ],
           );
         },
