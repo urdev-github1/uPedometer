@@ -115,14 +115,14 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               isTracking: isTrackingActive,
             ),
             
+            /*
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 20.0), 
                 child: Card(
                   // --- ANPASSUNG START: Neue Hintergrundfarbe ---
-                  color: const Color.fromRGBO(59, 166, 170, 1).withAlpha(175), 
-                  //color: const Color.fromARGB(64, 58, 61, 59).withAlpha(175), 
+                  color: const Color.fromRGBO(59, 166, 170, 1).withAlpha(175), // Alpha auf 200 (ca. 78% Deckkraft)
                   // --- ANPASSUNG ENDE ---
                   elevation: 4,
                   child: Padding(
@@ -150,6 +150,7 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
                 ),
               ),
             ),
+            */
           ],
         );
       },

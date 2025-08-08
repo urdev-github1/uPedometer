@@ -137,20 +137,20 @@ class LocationTrackerController with ChangeNotifier {
     // --- ENDE ---
   }
 
-  // --- NEUE FUNKTION ---
-  /// Schaltet das Tracking-Intervall zwischen dem Standardwert (7s) und Echtzeit (0s) um.
-  /// Wenn das Tracking aktiv ist, wird es neu gestartet, um die Änderung zu übernehmen.
-  void toggleTrackingInterval() {
-    _trackingInterval = _trackingInterval == 7 ? 0 : 7;
-    notifyListeners(); // UI über die Änderung informieren (z.B. für den Schalter-Status)
+  // // --- NEUE FUNKTION ---
+  // /// Schaltet das Tracking-Intervall zwischen dem Standardwert (7s) und Echtzeit (0s) um.
+  // /// Wenn das Tracking aktiv ist, wird es neu gestartet, um die Änderung zu übernehmen.
+  // void toggleTrackingInterval() {
+  //   _trackingInterval = _trackingInterval == 7 ? 0 : 7;
+  //   notifyListeners(); // UI über die Änderung informieren (z.B. für den Schalter-Status)
 
-    // Wenn das Tracking läuft, wird es gestoppt und mit dem neuen Intervall neu gestartet.
-    if (_isTracking) {
-      stopTracking();
-      startTracking();
-    }
-  }
-  // --- ENDE ---
+  //   // Wenn das Tracking läuft, wird es gestoppt und mit dem neuen Intervall neu gestartet.
+  //   if (_isTracking) {
+  //     stopTracking();
+  //     startTracking();
+  //   }
+  // }
+  // // --- ENDE ---
 
   /// Startet den Tracking-Vorgang.
   Future<void> startTracking() async {
