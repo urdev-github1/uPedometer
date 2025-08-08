@@ -45,6 +45,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
       },
     );
     if (confirmReset == true) {
+      // Da der context hier nicht verwendet wird, ist kein mounted-Check nach dem await nötig.
       controller.resetTracking();
     }
   }
@@ -107,8 +108,10 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                               : () async { // Den onPressed-Callback als async markieren
                                   final result = await controller.startTracking();
 
-                                  // Wenn Benachrichtigungen verweigert wurden & Widget noch existiert, Dialog anzeigen
-                                  if (result == TrackingStartResult.notificationDenied && mounted) {
+                                  // HINWEIS: Es wird `context.mounted` anstelle von `this.mounted` (vom State) verwendet.
+                                  // Dies stellt sicher, dass der spezifische BuildContext des Consumers zum Zeitpunkt
+                                  // des Dialogaufrufs nach dem 'await' noch gültig (mounted) ist.
+                                  if (result == TrackingStartResult.notificationDenied && context.mounted) {
                                     showDialog(
                                       context: context,
                                       builder: (dialogContext) {

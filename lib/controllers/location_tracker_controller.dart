@@ -38,7 +38,8 @@ class LocationTrackerController with ChangeNotifier {
   StreamSubscription<Position>? _positionStreamSubscription;
   Position? _lastPosition;
 
-  int _trackingInterval = 7;
+  // Das Feld ist jetzt 'final', da es nach der Initialisierung nicht mehr geändert wird.
+  final int _trackingInterval = 7;
 
   final List<LatLng> _routePoints = [];
 

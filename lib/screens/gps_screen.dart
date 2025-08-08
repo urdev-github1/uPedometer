@@ -35,20 +35,18 @@ class _GpsScreenState extends State<GpsScreen> with AutomaticKeepAliveClientMixi
           IconButton(
             icon: const Icon(Icons.share),
             tooltip: 'Koordinaten teilen',
-            // =============================================================== //
-            // --- ANPASSUNG START: Robusterer "onPressed"-Callback ---        //
-            // =============================================================== //
             onPressed: !canShare
                 ? null
-                : () async { // Callback als async markieren
-                    // Schritt 1: Überprüfen, ob das Widget noch im Widget-Baum ist.
+                : () async {
                     if (!mounted) return;
 
-                    // Schritt 2: Debug-Ausgabe, um zu bestätigen, dass die Funktion aufgerufen wird.
-                    debugPrint("Share button pressed. Attempting to share coordinates.");
+                    // Benötigte Objekte aus dem BuildContext vor dem 'await' extrahieren.
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
                     try {
-                      final lat = position!.latitude.toStringAsFixed(6);
+                      debugPrint("Share button pressed. Attempting to share coordinates.");
+                      
+                      final lat = position.latitude.toStringAsFixed(6);
                       final lon = position.longitude.toStringAsFixed(6);
 
                       final String shareText =
@@ -60,17 +58,20 @@ class _GpsScreenState extends State<GpsScreen> with AutomaticKeepAliveClientMixi
                           'Standard Geo-Format:\n'
                           'geo:$lat,$lon';
 
-                      // Schritt 3: Führe die Teilen-Aktion aus.
-                      await Share.share(
-                        shareText,
-                        subject: 'Meine aktuelle GPS-Position',
+                      // Führe die Teilen-Aktion aus (asynchrone Lücke).
+                      await SharePlus.instance.share(
+                        ShareParams(
+                          text: shareText,
+                          subject: 'Meine aktuelle GPS-Position',
+                        ),
                       );
                     } catch (e) {
-                      // Schritt 4: Fehler abfangen und dem Benutzer eine Rückmeldung geben.
+                      // Fehler abfangen und dem Benutzer eine Rückmeldung geben.
                       debugPrint("Error sharing coordinates: $e");
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                        // Die zuvor gespeicherte Referenz sicher verwenden.
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
                             content: Text('Teilen ist fehlgeschlagen.'),
                             backgroundColor: Colors.red,
                           ),
@@ -78,9 +79,6 @@ class _GpsScreenState extends State<GpsScreen> with AutomaticKeepAliveClientMixi
                       }
                     }
                   },
-            // =============================================================== //
-            // --- ENDE DER ANPASSUNG ---                                      //
-            // =============================================================== //
           ),
         ],
       ),
