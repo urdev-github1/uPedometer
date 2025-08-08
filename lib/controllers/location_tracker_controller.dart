@@ -207,7 +207,7 @@ class LocationTrackerController with ChangeNotifier {
         // =============================================================== //
 
         // Mindestabstand in Metern, ab dem ein neuer Punkt erfasst wird.
-        const double minDistanceThreshold = 5.0;
+        const double minDistanceThreshold = 12.0;
 
         // Wenn es die allererste Position ist, speichere sie direkt.
         if (_lastPosition == null) {
