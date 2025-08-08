@@ -29,6 +29,7 @@ class MyApp extends StatelessWidget {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'uPedometer',
       theme: lightTheme,
       darkTheme: darkTheme,

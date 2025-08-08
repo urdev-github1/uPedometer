@@ -182,7 +182,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                           const SizedBox(height: 8),
                           Container(
                             constraints: const BoxConstraints(minHeight: 48),
-                            alignment: Alignment.center,
+                            alignment: Alignment.centerLeft, // <<< ÄNDERUNG HIER
                             child: Builder(
                               builder: (context) {
                                 if (controller.isFetchingAddress) {
@@ -201,7 +201,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                   );
                                 } else {
                                   return Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.start, // <<< ÄNDERUNG HIER
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Text(
