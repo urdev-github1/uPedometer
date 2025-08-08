@@ -203,11 +203,11 @@ class LocationTrackerController with ChangeNotifier {
     _positionStreamSubscription = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
       (Position position) {
         // =============================================================== //
-        // --- ANPASSUNG START: Nur bei Bewegung einen Punkt erfassen ---  //
+        // --- ANPASSUNG START: Dynamischer Mindestabstand ---             //
         // =============================================================== //
 
         // Mindestabstand in Metern, ab dem ein neuer Punkt erfasst wird.
-        const double minDistanceThreshold = 12.0;
+        //const double minDistanceThreshold = 12.0;
 
         // Wenn es die allererste Position ist, speichere sie direkt.
         if (_lastPosition == null) {
@@ -217,6 +217,10 @@ class LocationTrackerController with ChangeNotifier {
           notifyListeners();
           return; // Verarbeitung für diesen Punkt hier beenden.
         }
+
+        // NEU: Der Mindestabstand wird dynamisch basierend auf der aktuellen
+        // GPS-Genauigkeit plus einem Puffer von 1 Meter berechnet.
+        final double minDistanceThreshold = position.accuracy + 1.0;
 
         // Berechne die Distanz zum letzten gespeicherten Punkt.
         final double distance = Geolocator.distanceBetween(
