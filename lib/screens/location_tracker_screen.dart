@@ -1,5 +1,9 @@
+// lib/screens/location_tracker_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// NEU: Import für permission_handler hinzufügen, um openAppSettings() zu nutzen
+import 'package:permission_handler/permission_handler.dart';
 import '../controllers/location_tracker_controller.dart';
 
 class LocationTrackerScreen extends StatefulWidget {
@@ -95,7 +99,49 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                           icon: const Icon(Icons.play_arrow),
                           label: const Text('Start', style: TextStyle(fontSize: 18)),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                          onPressed: controller.isTracking ? null : controller.startTracking,
+                          // =============================================================== //
+                          // --- ANPASSUNG START: Logik für Berechtigungsprüfung ---         //
+                          // =============================================================== //
+                          onPressed: controller.isTracking
+                              ? null
+                              : () async { // Den onPressed-Callback als async markieren
+                                  final result = await controller.startTracking();
+
+                                  // Wenn Benachrichtigungen verweigert wurden & Widget noch existiert, Dialog anzeigen
+                                  if (result == TrackingStartResult.notificationDenied && mounted) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (dialogContext) {
+                                        final dialogTheme = Theme.of(dialogContext);
+                                        return AlertDialog(
+                                          backgroundColor: dialogTheme.dialogTheme.backgroundColor,
+                                          title: Text('Benachrichtigung erforderlich', style: dialogTheme.textTheme.titleLarge),
+                                          content: Text(
+                                            'Um die Route im Hintergrund aufzuzeichnen, benötigt die App die Erlaubnis, Benachrichtigungen zu senden. Bitte aktivieren Sie diese in den Einstellungen.',
+                                            style: dialogTheme.textTheme.bodyMedium,
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              child: Text('Abbrechen', style: TextStyle(color: dialogTheme.textTheme.bodyMedium?.color)),
+                                              onPressed: () => Navigator.of(dialogContext).pop(),
+                                            ),
+                                            TextButton(
+                                              child: const Text('Einstellungen öffnen'),
+                                              onPressed: () {
+                                                // Öffnet direkt die App-Einstellungen
+                                                openAppSettings();
+                                                Navigator.of(dialogContext).pop();
+                                              },
+                                            ),
+                                          ],
+                                        );
+                                      }
+                                    );
+                                  }
+                                },
+                          // =============================================================== //
+                          // --- ANPASSUNG ENDE ---                                          //
+                          // =============================================================== //
                         ),
                         const SizedBox(width: 20),
                         ElevatedButton.icon(
@@ -133,7 +179,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                           const SizedBox(height: 8),
                           Container(
                             constraints: const BoxConstraints(minHeight: 48),
-                            alignment: Alignment.center, // Wichtig für die Zentrierung der neuen Row
+                            alignment: Alignment.center,
                             child: Builder(
                               builder: (context) {
                                 if (controller.isFetchingAddress) {
@@ -143,11 +189,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                   );
                                 }
                                 
-                                // =============================================================== //
-                                // --- ANPASSUNG START: Emoji durch Icon-Widget ersetzt ---        //
-                                // =============================================================== //
                                 if (controller.address != null) {
-                                  // Wenn eine Adresse vorhanden ist, zeige sie an.
                                   return Text(
                                     controller.address!,
                                     style: textTheme.bodyLarge?.copyWith(fontSize: 17),
@@ -155,7 +197,6 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                     softWrap: true,
                                   );
                                 } else {
-                                  // Wenn keine Adresse vorhanden ist, zeige die Anweisung mit Icon.
                                   return Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -165,7 +206,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                         style: textTheme.bodyLarge?.copyWith(fontSize: 17),
                                       ),
                                       Icon(
-                                        Icons.pin_drop_outlined, // Das Icon aus dem Button
+                                        Icons.pin_drop_outlined,
                                         color: textTheme.bodyLarge?.color,
                                         size: 20.0,
                                       ),
@@ -176,9 +217,6 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                     ],
                                   );
                                 }
-                                // =============================================================== //
-                                // --- ANPASSUNG ENDE ---                                          //
-                                // =============================================================== //
                               },
                             ),
                           ),

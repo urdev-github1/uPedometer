@@ -1,7 +1,7 @@
 // lib/controllers/location_tracker_controller.dart
 
 import 'dart:async';
-import 'dart:convert'; // HINZUGEFÜGT: Für die JSON-Konvertierung
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,13 +9,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 
+// =============================================================== //
+// --- NEUE IMPORTS FÜR DIE PRÜFUNG DER ANDROID-VERSION ---        //
+// =============================================================== //
+import 'dart:io'; // Erforderlich für die Prüfung der Plattform (Android/iOS).
+import 'package:device_info_plus/device_info_plus.dart'; // Für die Abfrage der SDK-Version.
+
 // Schlüssel für die persistenten Daten in SharedPreferences.
 const String kTotalDistanceKey = 'total_distance';
 const String kIsTrackingKey = 'is_tracking_active';
 const String kStartTimeKey = 'start_time';
 const String kStopTimeKey = 'stop_time';
 const String kAddressKey = 'address';
-const String kRoutePointsKey = 'route_points'; // HINZUGEFÜGT: Für die Routenpunkte
+const String kRoutePointsKey = 'route_points'; // Für die Routenpunkte
+
+// Ein Enum, um das Ergebnis des Startversuchs klar zu signalisieren.
+enum TrackingStartResult {
+  success,
+  locationDenied,
+  notificationDenied,
+}
 
 /// Verwaltet die Logik für das GPS-Tracking und speichert den Zustand persistent.
 class LocationTrackerController with ChangeNotifier {
@@ -25,7 +38,6 @@ class LocationTrackerController with ChangeNotifier {
   StreamSubscription<Position>? _positionStreamSubscription;
   Position? _lastPosition;
 
-  // Das Tracking-Intervall wird standardmäßig auf 7 Sekunden gesetzt.
   int _trackingInterval = 7;
 
   final List<LatLng> _routePoints = [];
@@ -41,7 +53,6 @@ class LocationTrackerController with ChangeNotifier {
   String get statusMessage => _statusMessage;
   String? get address => _address;
   bool get isFetchingAddress => _isFetchingAddress;
-  // Getter, damit die UI den aktuellen Intervall-Status abfragen kann.
   int get trackingInterval => _trackingInterval;
 
   DateTime? _startTime;
@@ -65,7 +76,6 @@ class LocationTrackerController with ChangeNotifier {
   Future<void> init() async {
     await _loadState();
     if (_isTracking) {
-      // Wenn das Tracking beim letzten Mal aktiv war, starte es erneut.
       await startTracking();
     }
   }
@@ -84,14 +94,12 @@ class LocationTrackerController with ChangeNotifier {
 
     _address = prefs.getString(kAddressKey);
 
-    // --- ROUTENPUNKTE LADEN ---
     final String? savedRoute = prefs.getString(kRoutePointsKey);
     if (savedRoute != null) {
       final List<dynamic> decodedList = json.decode(savedRoute);
       _routePoints.clear();
       _routePoints.addAll(decodedList.map<LatLng>((item) => LatLng(item['lat'], item['lng'])));
     }
-    // --- ENDE ---
 
     if (_isTracking) {
       _statusMessage = 'Tracking wird fortgesetzt...';
@@ -125,93 +133,108 @@ class LocationTrackerController with ChangeNotifier {
       await prefs.remove(kAddressKey);
     }
 
-    // --- ROUTENPUNKTE SPEICHERN ---
     if (_routePoints.isNotEmpty) {
-      final List<Map<String, double>> routePointsAsMap = _routePoints
-          .map((point) => {'lat': point.latitude, 'lng': point.longitude})
-          .toList();
+      final List<Map<String, double>> routePointsAsMap =
+          _routePoints.map((point) => {'lat': point.latitude, 'lng': point.longitude}).toList();
       await prefs.setString(kRoutePointsKey, json.encode(routePointsAsMap));
     } else {
       await prefs.remove(kRoutePointsKey);
     }
-    // --- ENDE ---
   }
 
-  // // --- NEUE FUNKTION ---
-  // /// Schaltet das Tracking-Intervall zwischen dem Standardwert (7s) und Echtzeit (0s) um.
-  // /// Wenn das Tracking aktiv ist, wird es neu gestartet, um die Änderung zu übernehmen.
-  // void toggleTrackingInterval() {
-  //   _trackingInterval = _trackingInterval == 7 ? 0 : 7;
-  //   notifyListeners(); // UI über die Änderung informieren (z.B. für den Schalter-Status)
-
-  //   // Wenn das Tracking läuft, wird es gestoppt und mit dem neuen Intervall neu gestartet.
-  //   if (_isTracking) {
-  //     stopTracking();
-  //     startTracking();
-  //   }
-  // }
-  // // --- ENDE ---
-
-  /// Startet den Tracking-Vorgang.
-  Future<void> startTracking() async {
-    final permissionStatus = await Permission.location.request();
-    if (permissionStatus.isGranted) {
-      if (_isTracking && _positionStreamSubscription != null) return;
-
-      if (!_isTracking) {
-        _startTime = DateTime.now();
-        _stopTime = null;
-        _routePoints.clear(); // Nur beim expliziten Start die Route zurücksetzen
-      }
-
-      _isTracking = true;
-      _statusMessage = 'Tracking aktiv...';
-      _lastPosition = null;
-
-      final locationSettings = AndroidSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 0,
-        // ANPASSUNG: Die Intervall-Dauer wird durch die _trackingInterval-Variable gesteuert.
-        intervalDuration: Duration(seconds: _trackingInterval),
-        foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: "Tracking aktiv",
-          notificationText: "Deine Route wird aufgezeichnet.",
-          enableWakeLock: true,
-          notificationIcon: AndroidResource(name: 'notification_icon'),
-        ),
-      );
-
-      _positionStreamSubscription = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-        (Position position) {
-          if (_lastPosition != null) {
-            double distance = Geolocator.distanceBetween(
-              _lastPosition!.latitude,
-              _lastPosition!.longitude,
-              position.latitude,
-              position.longitude,
-            );
-            _totalDistance += distance;
-          }
-          _lastPosition = position;
-          _routePoints.add(LatLng(position.latitude, position.longitude));
-          _saveState(); // Zustand speichern inkl. der neuen Route
-          notifyListeners();
-        },
-        onError: (error) {
-          _statusMessage = 'Fehler beim GPS-Empfang.';
-          notifyListeners();
-        },
-      );
-
-      await _saveState();
-      notifyListeners();
-    } else {
+  // =============================================================== //
+  // --- START DER ANGEPASSTEN `startTracking`-METHODE ---           //
+  // =============================================================== //
+  /// Startet den Tracking-Vorgang und prüft alle notwendigen Berechtigungen.
+  Future<TrackingStartResult> startTracking() async {
+    // Schritt 1: Standortberechtigung prüfen (bleibt unverändert).
+    final locationStatus = await Permission.location.request();
+    if (!locationStatus.isGranted) {
       _isTracking = false;
       _statusMessage = 'Standortberechtigung verweigert.';
       await _saveState();
       notifyListeners();
+      return TrackingStartResult.locationDenied;
     }
+
+    // Schritt 2: Benachrichtigungsberechtigung prüfen, aber nur wenn nötig.
+    bool notificationsGranted = true; // Standardannahme: Erlaubt.
+    
+    // Die Berechtigung wird nur für Android 13 (SDK 33) und höher benötigt.
+    // Platform.isAndroid stellt sicher, dass dies nicht auf iOS ausgeführt wird.
+    if (Platform.isAndroid) {
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      if (deviceInfo.version.sdkInt >= 33) {
+        final notificationStatus = await Permission.notification.request();
+        if (!notificationStatus.isGranted) {
+          notificationsGranted = false;
+        }
+      }
+    }
+
+    // Wenn die Berechtigung nicht erteilt wurde, breche den Start ab.
+    if (!notificationsGranted) {
+      _isTracking = false;
+      _statusMessage = 'Für das Tracking müssen Benachrichtigungen erlaubt sein.';
+      await _saveState();
+      notifyListeners();
+      return TrackingStartResult.notificationDenied;
+    }
+
+    // Schritt 3: Tracking-Prozess starten (unverändert).
+    if (_isTracking && _positionStreamSubscription != null) return TrackingStartResult.success;
+
+    if (!_isTracking) {
+      _startTime = DateTime.now();
+      _stopTime = null;
+      _routePoints.clear();
+    }
+
+    _isTracking = true;
+    _statusMessage = 'Tracking aktiv...';
+    _lastPosition = null;
+
+    final locationSettings = AndroidSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 0,
+      intervalDuration: Duration(seconds: _trackingInterval),
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationTitle: "Tracking aktiv",
+        notificationText: "Deine Route wird aufgezeichnet.",
+        enableWakeLock: true,
+        notificationIcon: AndroidResource(name: 'notification_icon'),
+      ),
+    );
+
+    _positionStreamSubscription = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+      (Position position) {
+        if (_lastPosition != null) {
+          double distance = Geolocator.distanceBetween(
+            _lastPosition!.latitude,
+            _lastPosition!.longitude,
+            position.latitude,
+            position.longitude,
+          );
+          _totalDistance += distance;
+        }
+        _lastPosition = position;
+        _routePoints.add(LatLng(position.latitude, position.longitude));
+        _saveState();
+        notifyListeners();
+      },
+      onError: (error) {
+        _statusMessage = 'Fehler beim GPS-Empfang.';
+        notifyListeners();
+      },
+    );
+
+    await _saveState();
+    notifyListeners();
+    return TrackingStartResult.success;
   }
+  // =============================================================== //
+  // --- ENDE DER ANGEPASSTEN `startTracking`-METHODE ---            //
+  // =============================================================== //
 
   /// Stoppt den Tracking-Vorgang.
   void stopTracking() {
@@ -225,38 +248,17 @@ class LocationTrackerController with ChangeNotifier {
     _saveState();
     notifyListeners();
   }
-
-  // =============================================================== //
-  // --- ANPASSUNG START: Zweizeilige Adressformatierung ---         //
-  // =============================================================== //
-  /// Formatiert ein Placemark-Objekt in einen zweizeiligen, lesbaren String.
+  
   String _formatPlacemark(Placemark placemark) {
-    // Straße und Hausnummer extrahieren
     String street = placemark.street ?? '';
-
-    // Postleitzahl und Ort zu einer Zeile zusammenfügen.
-    // .trim() entfernt führende/nachgestellte Leerzeichen, falls einer der Werte fehlt.
     String cityLine = '${placemark.postalCode ?? ''} ${placemark.locality ?? ''}'.trim();
 
-    // Wenn die Straße leer ist, nur die Stadt-Zeile zurückgeben.
-    if (street.isEmpty) {
-      return cityLine;
-    }
-
-    // Wenn die Stadt-Zeile leer ist, nur die Straße zurückgeben.
-    if (cityLine.isEmpty) {
-      return street;
-    }
-
-    // Beide Teile mit einem Zeilenumbruch (\n) kombinieren.
+    if (street.isEmpty) return cityLine;
+    if (cityLine.isEmpty) return street;
+    
     return '$street\n$cityLine';
   }
-  // =============================================================== //
-  // --- ANPASSUNG ENDE ---                                          //
-  // =============================================================== //
 
-
-  /// Ruft die aktuelle Position ab und ermittelt die zugehörige Adresse.
   Future<void> fetchAddress() async {
     if (_isFetchingAddress) return;
     _isFetchingAddress = true;
@@ -281,10 +283,8 @@ class LocationTrackerController with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Setzt alle Tracking-Daten zurück.
   void resetTracking() {
     if (_isTracking) {
-      // Stoppt das Tracking, wenn es aktiv ist, aber löscht die Daten noch nicht
       stopTracking();
     }
 
@@ -292,10 +292,10 @@ class LocationTrackerController with ChangeNotifier {
     _startTime = null;
     _stopTime = null;
     _address = null;
-    _routePoints.clear(); // Leert die Routenpunkte im Arbeitsspeicher
+    _routePoints.clear();
     _statusMessage = 'Drücke Start, um das Tracking zu beginnen.';
 
-    _saveState(); // Speichert den leeren Zustand (inkl. leerer Route)
+    _saveState();
     notifyListeners();
   }
 
