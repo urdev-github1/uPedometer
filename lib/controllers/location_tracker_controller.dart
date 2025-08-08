@@ -143,12 +143,9 @@ class LocationTrackerController with ChangeNotifier {
     }
   }
 
-  // =============================================================== //
-  // --- START DER ANGEPASSTEN `startTracking`-METHODE ---           //
-  // =============================================================== //
   /// Startet den Tracking-Vorgang und prüft alle notwendigen Berechtigungen.
   Future<TrackingStartResult> startTracking() async {
-    // Schritt 1: Standortberechtigung prüfen (bleibt unverändert).
+    // Schritt 1: Standortberechtigung prüfen.
     final locationStatus = await Permission.location.request();
     if (!locationStatus.isGranted) {
       _isTracking = false;
@@ -159,10 +156,7 @@ class LocationTrackerController with ChangeNotifier {
     }
 
     // Schritt 2: Benachrichtigungsberechtigung prüfen, aber nur wenn nötig.
-    bool notificationsGranted = true; // Standardannahme: Erlaubt.
-    
-    // Die Berechtigung wird nur für Android 13 (SDK 33) und höher benötigt.
-    // Platform.isAndroid stellt sicher, dass dies nicht auf iOS ausgeführt wird.
+    bool notificationsGranted = true;
     if (Platform.isAndroid) {
       final deviceInfo = await DeviceInfoPlugin().androidInfo;
       if (deviceInfo.version.sdkInt >= 33) {
@@ -173,7 +167,6 @@ class LocationTrackerController with ChangeNotifier {
       }
     }
 
-    // Wenn die Berechtigung nicht erteilt wurde, breche den Start ab.
     if (!notificationsGranted) {
       _isTracking = false;
       _statusMessage = 'Für das Tracking müssen Benachrichtigungen erlaubt sein.';
@@ -182,7 +175,7 @@ class LocationTrackerController with ChangeNotifier {
       return TrackingStartResult.notificationDenied;
     }
 
-    // Schritt 3: Tracking-Prozess starten (unverändert).
+    // Schritt 3: Tracking-Prozess starten.
     if (_isTracking && _positionStreamSubscription != null) return TrackingStartResult.success;
 
     if (!_isTracking) {
@@ -209,19 +202,42 @@ class LocationTrackerController with ChangeNotifier {
 
     _positionStreamSubscription = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
       (Position position) {
-        if (_lastPosition != null) {
-          double distance = Geolocator.distanceBetween(
-            _lastPosition!.latitude,
-            _lastPosition!.longitude,
-            position.latitude,
-            position.longitude,
-          );
-          _totalDistance += distance;
+        // =============================================================== //
+        // --- ANPASSUNG START: Nur bei Bewegung einen Punkt erfassen ---  //
+        // =============================================================== //
+
+        // Mindestabstand in Metern, ab dem ein neuer Punkt erfasst wird.
+        const double minDistanceThreshold = 5.0;
+
+        // Wenn es die allererste Position ist, speichere sie direkt.
+        if (_lastPosition == null) {
+          _lastPosition = position;
+          _routePoints.add(LatLng(position.latitude, position.longitude));
+          _saveState();
+          notifyListeners();
+          return; // Verarbeitung für diesen Punkt hier beenden.
         }
-        _lastPosition = position;
-        _routePoints.add(LatLng(position.latitude, position.longitude));
-        _saveState();
-        notifyListeners();
+
+        // Berechne die Distanz zum letzten gespeicherten Punkt.
+        final double distance = Geolocator.distanceBetween(
+          _lastPosition!.latitude,
+          _lastPosition!.longitude,
+          position.latitude,
+          position.longitude,
+        );
+
+        // Nur wenn die Distanz den Schwellenwert überschreitet, wird der Punkt verarbeitet.
+        if (distance >= minDistanceThreshold) {
+          _totalDistance += distance;
+          _lastPosition = position;
+          _routePoints.add(LatLng(position.latitude, position.longitude));
+          _saveState();
+          notifyListeners();
+        }
+        
+        // =============================================================== //
+        // --- ANPASSUNG ENDE ---                                          //
+        // =============================================================== //
       },
       onError: (error) {
         _statusMessage = 'Fehler beim GPS-Empfang.';
@@ -233,9 +249,6 @@ class LocationTrackerController with ChangeNotifier {
     notifyListeners();
     return TrackingStartResult.success;
   }
-  // =============================================================== //
-  // --- ENDE DER ANGEPASSTEN `startTracking`-METHODE ---            //
-  // =============================================================== //
 
   /// Stoppt den Tracking-Vorgang.
   void stopTracking() {
