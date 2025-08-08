@@ -175,8 +175,9 @@ class LocationTrackerController with ChangeNotifier {
         intervalDuration: Duration(seconds: _trackingInterval),
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: "Tracking aktiv",
-          notificationText: "Ihre Route wird aufgezeichnet.",
+          notificationText: "Deine Route wird aufgezeichnet.",
           enableWakeLock: true,
+          notificationIcon: AndroidResource(name: 'notification_icon'),
         ),
       );
 
