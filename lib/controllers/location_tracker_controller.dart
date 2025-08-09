@@ -220,7 +220,7 @@ class LocationTrackerController with ChangeNotifier {
 
         // NEU: Der Mindestabstand wird dynamisch basierend auf der aktuellen
         // GPS-Genauigkeit plus einem Puffer von 1 Meter berechnet.
-        final double minDistanceThreshold = position.accuracy + 1.0;
+        final double minDistanceThreshold = position.accuracy + 2.0;
 
         // Berechne die Distanz zum letzten gespeicherten Punkt.
         final double distance = Geolocator.distanceBetween(

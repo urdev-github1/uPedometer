@@ -114,43 +114,6 @@ class _MapScreenState extends State<MapScreen> with AutomaticKeepAliveClientMixi
               },
               isTracking: isTrackingActive,
             ),
-            
-            /*
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20.0), 
-                child: Card(
-                  // --- ANPASSUNG START: Neue Hintergrundfarbe ---
-                  color: const Color.fromRGBO(59, 166, 170, 1).withAlpha(175), // Alpha auf 200 (ca. 78% Deckkraft)
-                  // --- ANPASSUNG ENDE ---
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16.0, right: 8.0, top: 4.0, bottom: 4.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          controller.trackingInterval == 0
-                              ? 'Erfassung in Echtzeit'
-                              : 'Erfassung alle 7 Sek.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        const SizedBox(width: 8), 
-                        Switch(
-                          value: controller.trackingInterval == 0,
-                          onChanged: (bool value) {
-                            controller.toggleTrackingInterval();
-                          },
-                          activeColor: Theme.of(context).hintColor,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            */
           ],
         );
       },
@@ -193,8 +156,10 @@ class _MapView extends StatelessWidget {
     LatLng initialCenter;
     if (currentPosition != null) {
       initialCenter = LatLng(currentPosition.latitude, currentPosition.longitude);
-    } else {
+    } else if (route.isNotEmpty) {
       initialCenter = route.last;
+    } else {
+      initialCenter = const LatLng(51.509865, -0.118092); // Fallback-Wert
     }
 
     return FlutterMap(
@@ -209,19 +174,30 @@ class _MapView extends StatelessWidget {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'dev.fleaflet.flutter_map.example',
         ),
+        
         if (route.isNotEmpty)
-          PolylineLayer(
-            polylines: [
-              Polyline(points: route, strokeWidth: 4.0, color: Colors.blue),
-            ],
+          CircleLayer(
+            circles: route.map((point) {
+              return CircleMarker(
+                point: point,
+                color: Colors.blue.withAlpha(179), // Entspricht ca. 70% Deckkraft
+                borderColor: Colors.blue.shade900,
+                borderStrokeWidth: 1.5,
+                useRadiusInMeter: false,
+                radius: 6,
+              );
+            }).toList(),
           ),
+
         if (currentPosition != null)
+          // Entscheidet, ob und wo ein Marker auf der Karte platziert wird.
           MarkerLayer(
             markers: [
               Marker(
                 width: 80.0,
                 height: 80.0,
                 point: LatLng(currentPosition.latitude, currentPosition.longitude),
+                // Definiert was an den angegebenen Koordinaten gezeichnet werden soll. 
                 child: _LocationMarker(heading: currentPosition.heading),
               ),
             ],
@@ -231,12 +207,11 @@ class _MapView extends StatelessWidget {
   }
 }
 
-
 // =======================================================================
 // Kleinere, private Helper-Widgets
 // =======================================================================
 
-/// Zeigt den Marker für die aktuelle Position an.
+/// Visuelle Darstellung des Markers (blauer Navigationspfeil).
 class _LocationMarker extends StatelessWidget {
   final double heading;
   const _LocationMarker({required this.heading});
