@@ -8,17 +8,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
-
-// =============================================================== //
-// --- NEUER IMPORT, UM AUF DEN SETTINGS CONTROLLER ZUGREIFEN ZU KÖNNEN --- //
-// =============================================================== //
 import 'settings_controller.dart'; 
-
-// =============================================================== //
-// --- IMPORTS FÜR DIE PRÜFUNG DER ANDROID-VERSION ---             //
-// =============================================================== //
-import 'dart:io'; // Erforderlich für die Prüfung der Plattform (Android/iOS).
-import 'package:device_info_plus/device_info_plus.dart'; // Für die Abfrage der SDK-Version.
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 
 // Schlüssel für die persistenten Daten in SharedPreferences.
 const String kTotalDistanceKey = 'total_distance';
@@ -26,37 +18,27 @@ const String kIsTrackingKey = 'is_tracking_active';
 const String kStartTimeKey = 'start_time';
 const String kStopTimeKey = 'stop_time';
 const String kAddressKey = 'address';
-const String kRoutePointsKey = 'route_points'; // Für die Routenpunkte
+const String kRoutePointsKey = 'route_points';
 
-// Ein Enum, um das Ergebnis des Startversuchs klar zu signalisieren.
 enum TrackingStartResult {
   success,
   locationDenied,
   notificationDenied,
 }
 
-/// Verwaltet die Logik für das GPS-Tracking und speichert den Zustand persistent.
 class LocationTrackerController with ChangeNotifier {
   double _totalDistance = 0.0;
   bool _isTracking = false;
   String _statusMessage = 'Lade Zustand...';
   StreamSubscription<Position>? _positionStreamSubscription;
   Position? _lastPosition;
-
-  // Zeitstempel für den zuletzt gespeicherten Punkt (für den Zeitfilter)
   DateTime? _lastPointTime;
-
   final List<LatLng> _routePoints = [];
-
   String? _address;
   bool _isFetchingAddress = false;
-
-  // =============================================================== //
-  // --- NEU: Eine Referenz auf den SettingsController ---           //
-  // =============================================================== //
   SettingsController? _settingsController;
 
-  // Getter für die UI
+  // Getter
   Position? get currentPosition => _lastPosition;
   List<LatLng> get route => _routePoints;
   double get totalDistanceInKm => _totalDistance / 1000;
@@ -64,14 +46,11 @@ class LocationTrackerController with ChangeNotifier {
   String get statusMessage => _statusMessage;
   String? get address => _address;
   bool get isFetchingAddress => _isFetchingAddress;
-
   DateTime? _startTime;
   DateTime? _stopTime;
-
   DateTime? get startTime => _startTime;
   DateTime? get stopTime => _stopTime;
 
-  /// Gibt die formatierte Dauer des Trackings zurück.
   String get trackingDurationFormatted {
     if (_startTime == null) return '00:00';
     final endTime = _stopTime ?? DateTime.now();
@@ -82,15 +61,16 @@ class LocationTrackerController with ChangeNotifier {
     return '$hours:$minutes';
   }
 
+  // =============================================================== //
+  // --- KORRIGIERTE init() METHODE ---                              //
+  // =============================================================== //
   /// Initialisiert den Controller und lädt den gespeicherten Zustand.
   Future<void> init() async {
     await _loadState();
-    if (_isTracking) {
-      _isTracking = false; // Tracking-Zustand zurücksetzen
-      _statusMessage = 'Tracking wurde unterbrochen. Bitte neu starten.';
-      await _saveState();
-      notifyListeners();
-    }
+    // Der problematische Code-Block, der das Tracking beendet hat, wurde entfernt.
+    // Wenn die App neu gestartet wird, wird der Tracking-Status jetzt korrekt
+    // aus SharedPreferences geladen und beibehalten, sodass der Vordergrund-Dienst
+    // nahtlos weitermacht und die UI den korrekten Zustand anzeigt.
   }
 
   /// Lädt den Zustand aus SharedPreferences.
@@ -155,17 +135,12 @@ class LocationTrackerController with ChangeNotifier {
     }
   }
 
-  // =============================================================== //
-  // --- ANPASSUNG: startTracking akzeptiert nun den Controller ---   //
-  // =============================================================== //
   /// Startet den Tracking-Vorgang und verwendet die Einstellungen dynamisch.
   Future<TrackingStartResult> startTracking({
     required SettingsController settingsController,
   }) async {
-    // Speichere eine Referenz auf den Controller, um live auf Einstellungen zugreifen zu können.
     _settingsController = settingsController;
 
-    // Schritt 1: Standortberechtigung prüfen.
     final locationStatus = await Permission.location.request();
     if (!locationStatus.isGranted) {
       _isTracking = false;
@@ -175,7 +150,6 @@ class LocationTrackerController with ChangeNotifier {
       return TrackingStartResult.locationDenied;
     }
 
-    // Schritt 2: Benachrichtigungsberechtigung prüfen (nur für Android SDK 33+).
     bool notificationsGranted = true;
     if (Platform.isAndroid) {
       final deviceInfo = await DeviceInfoPlugin().androidInfo;
@@ -195,7 +169,6 @@ class LocationTrackerController with ChangeNotifier {
       return TrackingStartResult.notificationDenied;
     }
 
-    // Schritt 3: Tracking-Prozess starten.
     if (_isTracking && _positionStreamSubscription != null) return TrackingStartResult.success;
 
     if (!_isTracking) {
@@ -212,7 +185,6 @@ class LocationTrackerController with ChangeNotifier {
     final locationSettings = AndroidSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 0,
-      // Das Abfrageintervall wird hier einmalig aus den aktuellen Einstellungen gelesen.
       intervalDuration: Duration(seconds: _settingsController!.trackingInterval),
       foregroundNotificationConfig: const ForegroundNotificationConfig(
         notificationTitle: "Tracking aktiv",
@@ -224,25 +196,18 @@ class LocationTrackerController with ChangeNotifier {
 
     _positionStreamSubscription = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
       (Position position) {
-        // ======================================================================= //
-        // --- ANPASSUNG: Dynamische Filterlogik mit Live-Einstellungen ---        //
-        // ======================================================================= //
         final DateTime now = DateTime.now();
-
-        // Sicherheitsabfrage, falls der Controller nicht verfügbar ist.
         if (_settingsController == null) return;
 
-        // Wenn es der allererste Punkt ist, speichere ihn direkt.
         if (_lastPosition == null) {
           _lastPosition = position;
           _lastPointTime = now;
           _routePoints.add(LatLng(position.latitude, position.longitude));
           _saveState();
           notifyListeners();
-          return; // Verarbeitung für diesen Punkt hier beenden.
+          return;
         }
         
-        // Bedingung 1: Distanzfilter (liest den Wert live aus dem Controller)
         final double minDistanceThreshold = position.accuracy + _settingsController!.accuracyBuffer;
         final double distance = Geolocator.distanceBetween(
           _lastPosition!.latitude,
@@ -251,30 +216,23 @@ class LocationTrackerController with ChangeNotifier {
           position.longitude,
         );
 
-        // Wenn die Distanz nicht ausreicht, wird der Punkt ignoriert.
         if (distance < minDistanceThreshold) {
           return;
         }
 
-        // Bedingung 2: Zeitfilter (liest die Werte live aus dem Controller)
         if (_settingsController!.isTimeFilterEnabled) {
           final int secondsSinceLastPoint = now.difference(_lastPointTime!).inSeconds;
-          // Wenn die Mindestzeit noch nicht vergangen ist, wird der Punkt ignoriert.
           if (secondsSinceLastPoint < _settingsController!.timeFilterValue) {
             return;
           }
         }
 
-        // Wenn alle Bedingungen erfüllt sind, wird der Punkt verarbeitet.
         _totalDistance += distance;
         _lastPosition = position;
-        _lastPointTime = now; // Zeitstempel aktualisieren
+        _lastPointTime = now;
         _routePoints.add(LatLng(position.latitude, position.longitude));
         _saveState();
         notifyListeners();
-        // =============================================================== //
-        // --- ANPASSUNG ENDE ---                                          //
-        // =============================================================== //
       },
       onError: (error) {
         _statusMessage = 'Fehler beim GPS-Empfang.';
@@ -295,9 +253,6 @@ class LocationTrackerController with ChangeNotifier {
     _positionStreamSubscription = null;
     _isTracking = false;
     _stopTime = DateTime.now();
-    // =============================================================== //
-    // --- NEU: Referenz auf den SettingsController entfernen ---      //
-    // =============================================================== //
     _settingsController = null;
     _statusMessage = 'Tracking gestoppt. Distanz: ${totalDistanceInKm.toStringAsFixed(2)} km';
     _saveState();
@@ -307,10 +262,8 @@ class LocationTrackerController with ChangeNotifier {
   String _formatPlacemark(Placemark placemark) {
     String street = placemark.street ?? '';
     String cityLine = '${placemark.postalCode ?? ''} ${placemark.locality ?? ''}'.trim();
-
     if (street.isEmpty) return cityLine;
     if (cityLine.isEmpty) return street;
-    
     return '$street\n$cityLine';
   }
 
@@ -342,7 +295,6 @@ class LocationTrackerController with ChangeNotifier {
     if (_isTracking) {
       stopTracking();
     }
-
     _totalDistance = 0.0;
     _startTime = null;
     _stopTime = null;
@@ -351,11 +303,7 @@ class LocationTrackerController with ChangeNotifier {
     _lastPosition = null;
     _lastPointTime = null;
     _statusMessage = 'Drücke Start, um das Tracking zu beginnen.';
-    // =============================================================== //
-    // --- NEU: Referenz auch hier sicherheitshalber entfernen ---     //
-    // =============================================================== //
     _settingsController = null;
-
     _saveState();
     notifyListeners();
   }

@@ -11,7 +11,7 @@ const String kTimeFilterValueKey = 'settings_timeFilterValue';
 
 class SettingsController with ChangeNotifier {
   // Private Variablen mit Standardwerten
-  int _trackingInterval = 7;     // Standard: 10 Sekunden
+  int _trackingInterval = 7;     // Standard: 7 Sekunden
   double _accuracyBuffer = 2.0;   // Standard: 2.0 Meter
   bool _isTimeFilterEnabled = false; // Standard: Aus
   int _timeFilterValue = 5;       // Standard: 5 Sekunden
@@ -29,7 +29,7 @@ class SettingsController with ChangeNotifier {
   /// Lädt alle Einstellungen aus SharedPreferences.
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    _trackingInterval = prefs.getInt(kTrackingIntervalKey) ?? 10;
+    _trackingInterval = prefs.getInt(kTrackingIntervalKey) ?? 7;
     _accuracyBuffer = prefs.getDouble(kAccuracyBufferKey) ?? 2.0;
     _isTimeFilterEnabled = prefs.getBool(kTimeFilterEnabledKey) ?? false;
     _timeFilterValue = prefs.getInt(kTimeFilterValueKey) ?? 5;
