@@ -2,19 +2,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:upedometer/controllers/location_tracker_controller.dart';
-import 'package:upedometer/controllers/step_counter_controller.dart';
-import 'package:upedometer/notifiers/theme_notifier.dart';
-import 'package:upedometer/utils/app_theme.dart';
-import 'package:upedometer/screens/main_screen.dart'; 
+import '../controllers/location_tracker_controller.dart';
+import '../controllers/step_counter_controller.dart';
+import '../notifiers/theme_notifier.dart';
+import '../utils/app_theme.dart';
+import '../screens/main_screen.dart'; 
+import '../controllers/settings_controller.dart';
 
 void main() {
   runApp(
     MultiProvider(
-      providers: [
+      providers: [  
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => StepCounterController()..init()),
         ChangeNotifierProvider(create: (_) => LocationTrackerController()..init()),
+        ChangeNotifierProvider(create: (_) => SettingsController()),
       ],
       child: const MyApp(),
     ),

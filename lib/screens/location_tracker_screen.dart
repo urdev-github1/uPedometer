@@ -2,8 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// NEU: Import für permission_handler hinzufügen, um openAppSettings() zu nutzen
 import 'package:permission_handler/permission_handler.dart';
+
+// NEUE IMPORTS
+import '../controllers/settings_controller.dart';
+import 'settings_screen.dart';
+
 import '../controllers/location_tracker_controller.dart';
 
 class LocationTrackerScreen extends StatefulWidget {
@@ -45,7 +49,6 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
       },
     );
     if (confirmReset == true) {
-      // Da der context hier nicht verwendet wird, ist kein mounted-Check nach dem await nötig.
       controller.resetTracking();
     }
   }
@@ -58,7 +61,18 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
       appBar: AppBar(
         title: const Text('GPS-Tracking'),
         centerTitle: true, 
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Einstellungen',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<LocationTrackerController>(
         builder: (context, controller, child) {
@@ -101,17 +115,21 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                           label: const Text('Start', style: TextStyle(fontSize: 18)),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                           // =============================================================== //
-                          // --- ANPASSUNG START: Logik für Berechtigungsprüfung ---         //
+                          // --- ANPASSUNG START: Start-Logik mit Controller-Übergabe ---    //
                           // =============================================================== //
                           onPressed: controller.isTracking
                               ? null
-                              : () async { // Den onPressed-Callback als async markieren
-                                  final result = await controller.startTracking();
+                              : () async {
+                                  // Greife auf beide Controller zu
+                                  final settingsController = Provider.of<SettingsController>(context, listen: false);
+                                  final locationController = Provider.of<LocationTrackerController>(context, listen: false);
 
-                                  // HINWEIS: Es wird `context.mounted` anstelle von `this.mounted` (vom State) verwendet.
-                                  // Dies stellt sicher, dass der spezifische BuildContext des Consumers zum Zeitpunkt
-                                  // des Dialogaufrufs nach dem 'await' noch gültig (mounted) ist.
-                                  if (result == TrackingStartResult.notificationDenied && context.mounted) {
+                                  // Starte das Tracking und übergebe die gesamte Instanz des SettingsController
+                                  final result = await locationController.startTracking(
+                                    settingsController: settingsController,
+                                  );
+
+                                  if (result == TrackingStartResult.notificationDenied && mounted) {
                                     showDialog(
                                       context: context,
                                       builder: (dialogContext) {
@@ -131,7 +149,6 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                             TextButton(
                                               child: const Text('Einstellungen öffnen'),
                                               onPressed: () {
-                                                // Öffnet direkt die App-Einstellungen
                                                 openAppSettings();
                                                 Navigator.of(dialogContext).pop();
                                               },
@@ -182,7 +199,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                           const SizedBox(height: 8),
                           Container(
                             constraints: const BoxConstraints(minHeight: 48),
-                            alignment: Alignment.centerLeft, // <<< ÄNDERUNG HIER
+                            alignment: Alignment.centerLeft,
                             child: Builder(
                               builder: (context) {
                                 if (controller.isFetchingAddress) {
@@ -201,7 +218,7 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                                   );
                                 } else {
                                   return Row(
-                                    mainAxisAlignment: MainAxisAlignment.start, // <<< ÄNDERUNG HIER
+                                    mainAxisAlignment: MainAxisAlignment.start,
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Text(
