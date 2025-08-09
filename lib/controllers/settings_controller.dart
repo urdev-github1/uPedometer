@@ -11,10 +11,10 @@ const String kTimeFilterValueKey = 'settings_timeFilterValue';
 
 class SettingsController with ChangeNotifier {
   // Private Variablen mit Standardwerten
-  int _trackingInterval = 7; // Standard: 10 Sekunden
-  double _accuracyBuffer = 2.0; // Standard: 2.0 Meter
+  int _trackingInterval = 10;     // Standard: 10 Sekunden
+  double _accuracyBuffer = 2.0;   // Standard: 2.0 Meter
   bool _isTimeFilterEnabled = false; // Standard: Aus
-  int _timeFilterValue = 5; // Standard: 5 Sekunden
+  int _timeFilterValue = 5;       // Standard: 5 Sekunden
 
   // Öffentliche Getter, damit der Rest der App die Werte lesen kann
   int get trackingInterval => _trackingInterval;
