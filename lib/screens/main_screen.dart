@@ -1,10 +1,10 @@
 // lib/screens/main_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:upedometer/screens/step_counter_screen.dart';
-import 'package:upedometer/screens/location_tracker_screen.dart';
-import 'package:upedometer/screens/gps_screen.dart'; 
-import 'package:upedometer/screens/map_screen.dart'; // NEU: Importieren
+import '../screens/step_counter_screen.dart';
+import '../screens/location_tracker_screen.dart';
+import '../screens/gps_screen.dart'; 
+import '../screens/map_screen.dart'; // NEU: Importieren
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

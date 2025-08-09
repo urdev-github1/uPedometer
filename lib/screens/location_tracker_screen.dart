@@ -62,9 +62,6 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
         title: const Text('GPS-Tracking'),
         centerTitle: true, 
         automaticallyImplyLeading: false,
-        // =============================================================== //
-        // --- ANPASSUNG: Icon-Button für Einstellungen ---                //
-        // =============================================================== //
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -118,24 +115,21 @@ class _LocationTrackerScreenState extends State<LocationTrackerScreen> with Auto
                           label: const Text('Start', style: TextStyle(fontSize: 18)),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                           // =============================================================== //
-                          // --- ANPASSUNG START: Start-Logik mit Einstellungen ---          //
+                          // --- ANPASSUNG START: Start-Logik mit Controller-Übergabe ---    //
                           // =============================================================== //
                           onPressed: controller.isTracking
                               ? null
                               : () async {
                                   // Greife auf beide Controller zu
-                                  final settings = Provider.of<SettingsController>(context, listen: false);
+                                  final settingsController = Provider.of<SettingsController>(context, listen: false);
                                   final locationController = Provider.of<LocationTrackerController>(context, listen: false);
 
-                                  // Starte das Tracking mit den Werten aus dem SettingsController
+                                  // Starte das Tracking und übergebe die gesamte Instanz des SettingsController
                                   final result = await locationController.startTracking(
-                                    trackingInterval: settings.trackingInterval,
-                                    accuracyBuffer: settings.accuracyBuffer,
-                                    isTimeFilterEnabled: settings.isTimeFilterEnabled,
-                                    timeFilterValue: settings.timeFilterValue,
+                                    settingsController: settingsController,
                                   );
 
-                                  if (result == TrackingStartResult.notificationDenied && context.mounted) {
+                                  if (result == TrackingStartResult.notificationDenied && mounted) {
                                     showDialog(
                                       context: context,
                                       builder: (dialogContext) {
