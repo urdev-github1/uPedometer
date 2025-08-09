@@ -7,6 +7,7 @@ import 'package:upedometer/controllers/step_counter_controller.dart';
 import 'package:upedometer/notifiers/theme_notifier.dart';
 import 'package:upedometer/utils/app_theme.dart';
 import 'package:upedometer/screens/main_screen.dart'; 
+import 'package:upedometer/controllers/settings_controller.dart';
 
 void main() {
   runApp(
@@ -15,6 +16,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => StepCounterController()..init()),
         ChangeNotifierProvider(create: (_) => LocationTrackerController()..init()),
+        ChangeNotifierProvider(create: (_) => SettingsController()),
       ],
       child: const MyApp(),
     ),
